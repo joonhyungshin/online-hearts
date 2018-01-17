@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="Generator" content="EditPlus®">
+  <meta name="Author" content="">
+  <meta name="Keywords" content="">
+  <meta name="Description" content="">
+  <title>Document</title>
+  <style type='text/css'>
+  div#canvas {
+	width:1000px;
+	height:600px;
+	margin: 50px 50px;
+	border:3px solid black;
+	position:absolute;
+	background-color:green;
+	overflow:hidden;
+  }
+
+  div.player {
+    position:absolute;
+	font-size:14pt;
+	color:white;
+  }
+
+  div#wplayer {
+	left: 80px;
+  }
+
+  div#nplayer {
+	left: 460px;
+  }
+
+  div#eplayer {
+    left: 840px;
+  }
+
+  div#splayer {
+	left: 300px;
+	top: 430px;
+  }
+
+  input#h1 {
+    position:absolute;
+	top: 500px;
+	left: 900px;
+  }
+
+  </style>
+  <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+ </head>
+ <body>
+  <div id='canvas'>
+  <div id='wplayer' class='player'></div>
+  <div id='eplayer' class='player'></div>
+  <div id='splayer' class='player'></div>
+  <div id='nplayer' class='player'></div>
+  <input type='button' id='h1' value='fuck' class='maj'>
+  <input type='button' id='h2' value='shit' class='maj'>
+  <input type='button' id='h3' value='hell' class='min'>
+  </div>
+  <div id='shit'>
+  <script language='javascript'>
+   $('#h1').on('click', function(){
+	   alert(this.value);
+   });
+   
+   var center = new Point(460, 252);
+   		// Hearts
+	var n_sub = new Point(460, 190);
+	var n_pen = new Point(460, -120);
+	var e_sub = new Point(548, 252);
+	var e_pen = new Point(1010, 252);
+	var s_sub = new Point(460, 314);
+	var s_pen = new Point(460, 610);
+	var w_sub = new Point(372, 252);
+	var w_pen = new Point(-120, 252);
+	var n_pos = new Array(13);
+	for (i=0; i<13; i++){
+		n_pos[i] = new Point(310+25*i, 30);
+	}
+	var e_pos = new Array(13);
+	for (i=0; i<13; i++){
+		e_pos[i] = new Point(840, 30+25*i);
+	}
+	var s_pos = new Array(13);
+	for (i=0; i<13; i++){
+		s_pos[i] = new Point(130+55*i, 469);
+	}
+	var w_pos = new Array(13);
+	for (i=0; i<13; i++){
+		w_pos[i] = new Point(80, 30+25*i);
+	}
+	var pos = [n_pos, e_pos, s_pos, w_pos];
+	var cardimg = new Array(53);
+	var canvas = document.getElementById('canvas');
+	for (i=0; i<52; i++){
+		cardimg[i] = new Image(80, 116);
+		cardimg[i].id = i;
+		cardimg[i].src = 'images/back.png';
+		cardimg[i].style.position = 'absolute';
+		cardimg[i].style.left = center.left;
+		cardimg[i].style.top = center.top;
+		cardimg[i].style.zIndex = i;
+		canvas.appendChild(cardimg[i]);
+	}
+
+	var deal = document.createElement('BUTTON');
+	deal.value = 'Deal';
+	deal.id = 'deal';
+	deal.style.position = 'absolute';
+	deal.width = '60px';
+	deal.height = '30px';
+	deal.left = '470px';
+	deal.top = '285px';
+	canvas.appendChild(deal);
+
+	$('#deal').on('click', function(){
+		deal.style.visibility = 'hidden';
+		dealCard(0);
+	});
+	function dealCard(i){
+		for (j=0; j<4; j++)
+		{
+			$('#'+(4*i+j)).animate({
+				top: pos[j][i].top,
+				left: pos[j][i].left
+			});
+		}
+		if (i<12)
+		{
+			setTimeout(function(){
+				dealCard(i+1);
+			}, 200);
+		}
+		else {
+			flipCard(50);
+		}
+	}
+	function flipCard(i){
+		$('#'+i).animate(
+		{width: '0px',
+		left: (s_pos[(i-2)/4].x+40)+'px'},
+		'easeInSine',
+		function(){
+			cardimg[i].src = 'images/queen_of_spades.png'
+		});
+		$('#'+i).animate(
+		{width: '80px',
+		left: s_pos[(i-2)/4].left},
+		'easeOutSine');
+	}
+   function Point(x, y){
+	   this.x = x;
+	   this.y = y;
+	   this.top = y + 'px';
+	   this.left = x + 'px';
+   }
+   for (i=0; i<52; i++)
+   {
+	   $('#'+i).on('click', function(){
+		   var _i = this.id;
+		   flipCard(_i);
+		   $('#'+_i).animate({
+			   top: s_sub.top,
+			   left: s_sub.left
+		   });
+	   });
+   }
+  </script>
+ </body>
+</html>

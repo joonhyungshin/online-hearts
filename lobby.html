@@ -1,0 +1,562 @@
+<!doctype html>
+<html>
+	<head>
+		<title> Online Hearts - Lobby </title>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" type="text/css" href="/lobby.css" />
+		<script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			var socket = io(':8080/lobby');
+			var agent = navigator.userAgent;
+			var ie = /msie|trident/i.test(agent);
+			var chrome = /chrome/i.test(agent);
+			var blacklist = [];
+			var rooms = [];
+			var me;
+
+			socket.on('your name', function(name, admin){
+				me = name;
+				document.logout.lognum.value = me;
+				if (admin){
+					document.getElementById('manage').style.visibility = 'visible';
+				}
+			});
+
+			socket.on('room list', function(room_list){
+				rooms = room_list;
+				var roomBox = document.getElementById('roomlist');
+				for (var i=0; i<roomBox.length; i++){
+					roomBox.options[i].value = room_list[i].num;
+					roomBox.options[i].text = room_list[i].title + ' (' + room_list[i].members.length + '/' + room_list[i].maxm + ')';
+				}
+			});
+
+			socket.on('load rooms', function(room_list){
+				rooms = room_list;
+				var room;
+				for (var i in room_list){
+					room = new Option();
+					room.value = room_list[i].num;
+					room.text = room_list[i].title + " (" + room_list[i].members.length + "/" + room_list[i].maxm + ")";
+					roomlist.add(room);
+				}
+			});
+
+			socket.on('add room', function(room){
+				var roomop = new Option();
+				roomop.value = room.num;
+				roomop.text = room.title + " (" + room.members.length + "/" + room.maxm + ")";
+				roomlist.add(roomop);
+				rooms.push(room);
+			});
+
+			socket.on('remove room', function(roomnum){
+				for (var i in rooms){
+					if (rooms[i].num == roomnum){
+						break;
+					}
+				}
+				rooms.splice(i, 1);
+				$('#roomlist option[value='+roomnum+']').remove();
+			});
+
+			socket.on('load users', function(user_list){
+				var user;
+				for (var i in user_list){
+					user = new Option();
+					user.value = user_list[i];
+					user.text = user_list[i];
+					if (user_list[i] == me){
+						user.style.color = 'blue';
+					}
+					connect.add(user);
+				}
+			});
+
+			socket.on('add user', function(name){
+				var user = new Option();
+				user.value = name;
+				user.text = name;
+				connect.add(user);
+			});
+
+			socket.on('remove user', function(name){
+				$('#connect option[value='+name+']').remove();
+			});
+
+			socket.on('redirect', function(){
+				location.href='/';
+			});
+
+			socket.on('blacklist', function(black, name, added){
+				blacklist = black;
+				var user_index = selectBox.selectedIndex;
+				if (user_index != -1 && selectBox.options[user_index].value == name){
+					if (added){
+						$('#ignore').val('Unignore');
+					}
+					else {
+						$('#ignore').val('Ignore');
+					}
+				}
+			});
+
+			socket.on('kicked', function(){
+				alert('You have been kicked!');
+				document.logout.submit();
+			});
+
+			socket.on('banned', function(){
+				alert('You have been banned!');
+				document.logout.submit();
+			});
+
+			socket.on('stop server', function(){
+				alert('Server is closed. Sorry.');
+				document.logout.submit();
+			});
+
+			socket.on('alert', function(msg){
+				alert(msg);
+			});
+
+			socket.on('ask pw', function(roomnum){
+				var pw = prompt('Enter the password.', '');
+				socket.emit('return pw', roomnum, pw);
+			});
+
+			function joinRoom(roomnum){
+				socket.emit('join game', roomnum);
+			}
+
+			function joinSelect(roomselect){
+				var roomindex = roomselect.selectedIndex;
+				if (roomindex != -1){
+					joinRoom(roomselect.options[roomindex].value);
+				}
+			}
+
+			function Hearts(moon){
+				this.moon = moon;			// 0 for old moon, 1 for new moon
+			}
+
+			function Mighty(call, mightyf, mightl, jokerf, jokerl){
+				this.call = call;
+				this.mightyf = mightyf;
+				this.mightl = mightl;
+				this.jokerf = jokerf;
+				this.jokerl = jokerl;
+			}
+
+		    var img_L = 0;
+		    var img_T = 0;
+		    var targetObj;
+
+		    function getLeft(o){
+		        return parseInt(o.style.left.replace('px', ''));
+			}
+
+		 	function getTop(o){
+		      	return parseInt(o.style.top.replace('px', ''));
+			}
+
+			function moveDrag(e){
+			    var e_obj = window.event? window.event : e;
+			    var dmvx = parseInt(e_obj.clientX + img_L);
+			    var dmvy = parseInt(e_obj.clientY + img_T);
+			    targetObj.style.left = dmvx +"px";
+			    targetObj.style.top = dmvy +"px";
+			    return false;
+			}
+
+			function startDrag(e, obj){
+			    targetObj = document.getElementById(obj);
+			    var e_obj = window.event? window.event : e;
+			    img_L = getLeft(targetObj) - e_obj.clientX;
+			    img_T = getTop(targetObj) - e_obj.clientY;
+
+			    document.onmousemove = moveDrag;
+			    document.onmouseup = stopDrag;
+			    if(e_obj.preventDefault) e_obj.preventDefault(); 
+			}
+
+			function stopDrag(){
+			    document.onmousemove = null;
+			    document.onmouseup = null;
+			}
+
+			function hideDiv(){
+				var keyCode = event.keyCode;
+				if (keyCode == 27){
+					document.getElementById('roompage').style.visibility = 'hidden';
+				}
+			}
+		</script>
+	</head>
+	<body onkeydown='hideDiv()'>
+		<form method='post' name='logout'>
+			<input type='hidden' name='lognum' value=0>
+		</form>
+		<div id = 'header'>
+			<h1> Online Hearts Lobby </h1>
+		</div>
+		<div id = 'chatpage'>
+			<div id = 'content1'>
+				<form action='' id='chatform'>
+					<textarea id='chat'></textarea><br>
+					<input id='msg' type='text' autocomplete='off'><button id='send'> Send </button>
+				</form>
+			</div>
+			<div id = 'sidebar1'>
+				<div id='sidebar1_a'>
+					<input type='button' value='Make Game' id='makegame' /><br>
+					<input type='button' value='Join Game' id='joingame' /><br>
+					<input type='button' value='Option' id='option' /><br>
+					<input type='button' value='Logout' id='logout' /><br>
+					<input type='button' value='Manage' id='manage' style='visibility:hidden;' />
+				</div>
+				<div id='sidebar1_b'>
+					<select id='connect' size='100'>
+					</select><br>
+					<input type='button' value='Whisper' id='whisper' />
+					<input type='button' value='Ignore' id='ignore' />
+				</div>
+			</div>
+		</div>
+		<div id = 'roompage' style = 'left:500px; top:140px; visibility:hidden;'>
+			<form action = '' id = 'make_room'>
+				<div id = 'topbar' onmousedown = "startDrag(event, 'roompage')">
+					Create Room
+				</div>
+				<div id = 'title'>
+					TITLE 
+					<input type = 'text' name = 'roomtitle' maxlength = '20' size = '30' autocomplete = 'off' id = 'roomt' required/>			
+				</div>
+				<div id = 'passw'>
+					PASSWORD 
+					<input type = 'password' name = 'roompw' maxlength = '10' size = '25' id = 'roomp' />
+				</div>
+				<div id = 'container'>
+					<ul class = 'tabs'>
+						<li class = 'active' rel = 'hearts'> Hearts </li>
+						<li rel = 'mighty'> Mighty </li>
+					</ul>
+					<div class = 'tab_container'>
+						<div id = 'hearts' class = 'tab_menu'>
+							<button id = 'create_h'> Create </button>
+							<input type = 'button' value = 'Cancel' id = 'cancel_h' />
+							<div id = 'hearts_max'>
+								LIMIT
+								<select id = 'limit_h'>
+									<option value = 4> 4 </option>
+									<option value = 5> 5 </option>
+									<option value = 6> 6 </option>
+									<option value = 7> 7 </option>
+									<option value = 8> 8 </option>
+									<option value = 9> 9 </option>
+									<option value = 10 selected> 10 </option>
+								</select>
+							</div>
+							<br>
+							<font style='font-size:16px'> Shooting the moon </font>
+							<select id = 'moon'>
+								<option value = 0> Old moon </option>
+								<option value = 1> New moon </option>
+							</select>
+						</div>
+						<div id = 'mighty' class = 'tab_menu'>
+							<button id = 'create_m'> Create </button>
+							<input type = 'button' value = 'Cancel' id = 'cancel_m' />
+							<div id = 'mighty_max'>
+								LIMIT
+								<select id = 'limit_m'>
+									<option value = 5> 5 </option>
+									<option value = 6> 6 </option>
+									<option value = 7> 7 </option>
+									<option value = 8> 8 </option>
+									<option value = 9> 9 </option>
+									<option value = 10 selected> 10 </option>
+								</select>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div id = 'bottombar' onmousedown = "startDrag(event, 'roompage')">
+				</div>
+			</form>
+		</div>
+		<div id = 'joinpage' style='visibility:hidden'>
+			<div id = 'sidebar3'>
+				<input type='button' value='Back' id='backj' />
+			</div>
+			<div id = 'content3'>
+				<select id='roomlist' size='100' ondblclick="joinSelect(this)">
+				</select><br>
+			</div>
+			<div id = 'roominfo'>
+				<input type='button' value='Join' id='join' disabled/>
+			</div>
+		</div>
+		<div id = 'footer'>
+			<p> Developed by Joonhyung Shin </p>
+		</div>
+		<script language='javascript'>
+			$('.tab_menu').hide();
+			$('.tab_menu:first').show();
+
+			$('ul.tabs li').click(function (){
+				$('ul.tabs li').removeClass('active').css('color', '#333');
+				//$(this).addClass("active").css({"color": "darkred","font-weight": "bolder"});
+				$(this).addClass("active").css("color", "darkred");
+				$(".tab_menu").hide();
+				var activeTab = $(this).attr("rel");
+				$("#" + activeTab).fadeIn()
+			});
+
+			$('#make_room').submit(function(){
+				var title = $('#roomt').val();
+				var password = $('#roomp').val();
+				if ($('.active').attr('rel') == 'hearts'){
+					var limitselect = document.getElementById('limit_h');
+					var limitvalue = limitselect.selectedIndex;
+					var maxm = limitselect.options[limitvalue].value;
+					var moonselect = document.getElementById('moon');
+					var moonvalue = moonselect.selectedIndex;
+					var moon = moonselect.options[moonvalue].value;
+					var hearts = true;
+					var setting = new Hearts(moon);
+				}
+				else {
+					var limitselect = document.getElementById('limit_m');
+					var limitvalue = limitselect.selectedIndex;
+					var maxm = limitselect.options[limitvalue].value;
+					var hearts = false;
+					var setting = new Mighty('s3', true, false, false, false);
+				}
+				socket.emit('make game', title, password, hearts, maxm, setting);
+				return false;	
+			});
+
+			$('#cancel_h').on('click', function(){
+				roompage.style.visibility = 'hidden';
+			});
+
+			$('#cancel_m').on('click', function(){
+				roompage.style.visibility = 'hidden';
+			});
+
+			$('#logout').on('click', function(){
+				document.logout.submit();
+			});
+
+			$('#chatform').submit(function(){
+				socket.emit('chat msg', $('#msg').val());
+				$('#msg').val('');
+				$('#msg').focus();
+				return false;
+			});
+
+			$('#chat').on('focus', function(){
+				$('#msg').focus();
+			});
+
+			var roomBox = document.getElementById('roomlist');
+
+			$('#roomlist').on('change', function(){
+				var room_index = roomBox.selectedIndex;
+				if (room_index != -1){
+					document.getElementById('join').disabled = false;
+				}
+				else {
+					document.getElementById('join').disabled = true;
+				}
+			});
+
+			$('#join').on('click', function(){
+				joinSelect(roomBox);
+			});
+
+			var selectBox = document.getElementById('connect');
+			var chat = document.getElementById('chat');
+
+			$('#connect').on('change', function(){
+				var user_index = selectBox.selectedIndex;
+				if (user_index != -1){
+					var name = selectBox.options[user_index].value;
+					if (me == name){
+						document.getElementById('ignore').disabled = true;
+					}
+					else {
+						document.getElementById('ignore').disabled = false;
+					}
+					var flag = 0;
+					for (var i in blacklist){
+						if (blacklist[i] == name){
+							flag = 1;
+							break;
+						}
+					}
+					if (flag == 0){
+						$('#ignore').val('Ignore');
+					}
+					else {
+						$('#ignore').val('Unignore');
+					}
+				}
+			});
+
+			$('#whisper').on('click', function(){
+				var user_index = selectBox.selectedIndex;
+				if (user_index != -1 && $('#msg').val() != '') {
+					var name = selectBox.options[user_index].value;
+					var msg = '/w ' + name + ' ' + $('#msg').val();
+					socket.emit('chat msg', msg);
+					$('#msg').val('');
+				}
+				$('#msg').focus();
+			});
+
+			$('#ignore').on('click', function(){
+				var user_index = selectBox.selectedIndex;
+				if (user_index != -1) {
+					var name = selectBox.options[user_index].value;
+					var msg = 'ignore ' + name;
+					if ($('#ignore').val() == 'Ignore'){
+						msg = '/' + msg;
+						$('#ignore').val('Unignore');
+					}
+					else {
+						msg = '/un' + msg;
+						$('#ignore').val('Ignore');
+					}
+					socket.emit('chat msg', msg);
+				}
+			});
+
+			$('#makegame').on('click', function(){
+				roompage.style.visibility = 'visible';
+				$('#roomt').focus();
+			});
+
+			$('#joingame').on('click', function(){
+				roompage.style.visibility = 'hidden';
+				chatpage.style.visibility = 'hidden';
+				joinpage.style.visibility = 'visible';
+			});
+
+			$('#backj').on('click', function(){
+				joinpage.style.visibility = 'hidden';
+				chatpage.style.visibility = 'visible';
+			});
+
+			$('#option').on('click', function(){
+				roompage.style.visibility = 'hidden';
+			});
+
+			$('#manage').on('click', function(){
+				roompage.style.visibility = 'hidden';
+			});
+
+			socket.on('public msg', function(name, msg){
+				var flag = 0;
+				for (var i in blacklist){
+					if (blacklist[i] == name){
+						flag ++;
+					}
+				}
+				if (flag == 0){
+					if (ie){
+						var msg_mod = msg.split('&');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&amp;' + msg_mod[i];
+						}
+						msg_mod = msg.split('<');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&lt;' + msg_mod[i];
+						}
+						msg_mod = msg.split('>');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&gt;' + msg_mod[i];
+						}
+						$('#chat').append(name + ' : ' + msg + '\n');
+					}
+					else {
+						chat.value += (name + ' : ' + msg + '\n');
+					}
+					chat.scrollTop = chat.scrollHeight;
+				}
+			});
+
+			socket.on('private msg', function(name, msg){
+				var flag = 0;
+				for (var i in blacklist){
+					if (blacklist[i] == name){
+						flag ++;
+					}
+				}
+				if (flag == 0){
+					if (ie){
+						var msg_mod = msg.split('&');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&amp;' + msg_mod[i];
+						}
+						msg_mod = msg.split('<');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&lt;' + msg_mod[i];
+						}
+						msg_mod = msg.split('>');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&gt;' + msg_mod[i];
+						}
+						$('#chat').append('Whisper from ' + name + ' : ' + msg + '\n');
+					}
+					else {
+						chat.value += ('Whisper from ' + name + ' : ' + msg + '\n');
+					}
+					chat.scrollTop = chat.scrollHeight;
+				}
+			});
+
+			socket.on('server msg', function(msg){
+				if (ie){
+					var msg_mod = msg.split('&');
+					msg = msg_mod[0];
+					for (i=1; i<msg_mod.length; i++){
+						msg += '&amp;' + msg_mod[i];
+					}
+					msg_mod = msg.split('<');
+					msg = msg_mod[0];
+					for (i=1; i<msg_mod.length; i++){
+						msg += '&lt;' + msg_mod[i];
+					}
+					msg_mod = msg.split('>');
+					msg = msg_mod[0];
+					for (i=1; i<msg_mod.length; i++){
+						msg += '&gt;' + msg_mod[i];
+					}
+					$('#chat').append('<b>* ' + msg + '</b>\n');
+				}
+				else {
+					chat.value += ('* ' + msg + '\n');
+				}
+				chat.scrollTop = chat.scrollHeight;
+			});
+
+			socket.on('chat clear', function(){
+				if (chrome){
+					chat.value = '';
+				}
+				else {
+					$('#chat').val('');
+				}
+			});
+		</script>
+	</body>
+</html>

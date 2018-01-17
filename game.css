@@ -1,0 +1,214 @@
+body {
+	width:960px;
+	text-align:center;
+	margin:0 auto;
+	z-index:0;
+}
+
+/* Header */
+
+#header {
+	border:3px solid #eed;
+	background-color:#eee;
+	margin-bottom:10px;
+	width:100%;
+}
+
+/* Left side */
+
+#leftside {
+	width:60%;
+	float:left;
+	margin-left:10px;
+	height:500px;
+	margin-bottom:10px;
+}
+
+/* Room Info */
+
+#roominfo {
+	width:100%;
+	height:55%;
+	border:3px solid #eed;
+	background-color:#eee;
+}
+
+/* Chat Page */
+
+#chatpage {
+	width:100%;
+	height:40%;
+	margin-top:15px;
+	border:3px solid #eed;
+	background-color:#eee;
+}
+
+textarea#chat{
+	font-size:15px;
+	font-family:'돋움';
+	margin-left:1%;
+	margin-right:1%;
+	margin-top:10px;
+	width:97%;
+	height:150px;	
+}
+input#msg {
+	margin-left:1%;
+	width:85%;
+}
+input#send {
+	margin-left:1%;
+	width:20%;
+}
+
+/* Right side */
+
+#rightside {
+	width:30%;
+	height:500px;
+	float:right;
+	margin-right:10px;
+	border:3px solid #eed;
+	background-color:#eee;
+	margin-bottom:10px;
+}
+
+#userinfo {
+	float:left;
+	width:65%;
+}
+
+#gamers {
+	width:150px;
+	font-size:30px;
+}
+
+#spectators {
+	width:150px;
+	font-size:20px;
+}
+
+#menu {
+	float:left;
+	width:35%;
+}
+
+#usermenu {
+	width:100%;
+}
+
+#chatmenu {
+	width:100%;
+}
+
+input#designate {
+	margin-top:100px;
+	width:80px;
+	height:40px;
+}
+
+input#kick {
+	margin-top:20px;
+	width:80px;
+	height:40px;
+}
+
+input#whisper {
+	margin-top:20px;
+	width:80px;
+	height:40px;
+}
+
+input#ignore {
+	margin-top:20px;
+	width:80px;
+	height:40px;
+}
+
+/* Footer */
+#footer {
+	clear:both;
+	border:3px solid #eed;
+	background-color:#eee;
+	margin-top:10px;
+}
+
+/* Hearts Canvas */
+#heartscanvas{
+	border:3px solid black;
+	position:absolute;
+	width:1000px;
+	height:600px;
+	background-color:green;
+	margin-top:50px;
+	z-index:1;
+	overflow:hidden;
+}
+
+input#deal {
+	width:60px;
+	height:30px;
+	position:absolute;
+	top:285px;
+	left:470px;
+	z-index:100;
+}
+
+input#send {
+	width:60px;
+	height:30px;
+	position:absolute;
+	top:385px;
+	left:470px;
+	z-index:100;
+}
+
+input#confirm {
+	width:60px;
+	height:30px;
+	position:absolute;
+	top:385px;
+	left:570px;
+	z-index:100;
+}
+
+input#score {
+	position:absolute;
+	top:500px;
+	left:900px;
+}
+
+div.hearts {
+	position:absolute;
+	font-size:14pt;
+	color:white;
+}
+
+div#wgamerh {
+	left: 80px;
+}
+
+div#ngamerh {
+	left: 460px;
+}
+
+div#egamerh {
+	left: 840px;
+}
+
+div#sgamerh {
+	left: 300px;
+	top: 430px;
+}
+
+/* Mighty Canvas */
+#mightycanvas{
+	position:absolute;
+	border:3px solid black;
+	width:1000px;
+	height:600px;
+	background-color:green;
+	margin-top:50px;
+	z-index:1;
+	overflow:hidden;
+}

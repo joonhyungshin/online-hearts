@@ -1,0 +1,1303 @@
+<!doctype html>
+<html>
+	<head>
+		<title> Online Hearts - Room </title>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" type="text/css" href="/game.css" />
+		<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			var socket = io(':8080/game');
+			var agent = navigator.userAgent;
+			var chrome = /chrome/i.test(agent);
+			var ie = /msie|trident/i.test(agent);
+			var blacklist = [];
+			var leader;
+			var me;
+			var canvas;
+			var click_ok = false;
+			var subcode = null;
+			var confirms = 0;
+			var player_pos = [];
+			var deck = [];
+			var trick = 1;
+			var round = 1;
+			var heartbreak = false;
+			var hearts;
+			var first_suit = '';
+			var maxUser = null;
+			var submit_card = false;
+			var turns = 1;
+			var send_card = 0;
+			var send_list = [];
+			var send_index = [];
+			var center = new Point(460, 252);
+			// Hearts
+			var n_sub = new Point(460, 190);
+			var n_pen = new Point(460, -120);
+			var e_sub = new Point(548, 252);
+			var e_pen = new Point(1010, 252);
+			var s_sub = new Point(460, 314);
+			var s_pen = new Point(460, 610);
+			var w_sub = new Point(372, 252);
+			var w_pen = new Point(-90, 252);
+			var n_pos = new Array(13);
+			for (i=0; i<14; i++){
+				n_pos[i] = new Point(310+25*i, 30);
+			}
+			var e_pos = new Array(13);
+			for (i=0; i<14; i++){
+				e_pos[i] = new Point(840, 30+25*i);
+			}
+			var s_pos = new Array(13);
+			for (i=0; i<14; i++){
+				s_pos[i] = new Point(130+55*i, 469);
+			}
+			var w_pos = new Array(13);
+			for (i=0; i<14; i++){
+				w_pos[i] = new Point(80, 30+25*i);
+			}
+			var pos = [s_pos, w_pos, n_pos, e_pos];
+			var sub = [s_sub, w_sub, n_sub, e_sub];
+			var pen = [s_pen, w_pen, n_pen, e_pen];
+			var cardimg = new Array(53);
+			for (i=0; i<53; i++){
+				cardimg[i] = new Image(80, 116);
+				cardimg[i].value = 'back';
+				cardimg[i].src = 'images/back.png';
+				cardimg[i].id = 'card' + i;
+				cardimg[i].style.position = 'absolute';
+				cardimg[i].style.left = center.left;
+				cardimg[i].style.top = center.top;
+				cardimg[i].style.zIndex = i;
+			}
+			socket.on('room info', function(roomnum, title){
+				header.innerHTML = '<h1> Room '+(roomnum+1)+' - '+title+' </h1>'
+				document.title += (' '+(roomnum+1));
+			});
+			socket.on('redirect', function(){
+				location.href = '/';
+			});
+			socket.on('member list', function(myname, room){
+				me = myname;
+				hearts = room.hearts;
+				document.logout.lognum.value = me;
+				leader = room.leader;
+				if (me == leader){
+					$('#ready').val('Start');
+					document.getElementById('usermenu').style.visibility = 'visible';
+				}
+				var gamer, spectator;
+				for (var i in room.gamers){
+					gamer = new Option();
+					gamer.value = room.gamers[i][0];
+					if (room.leader == room.gamers[i][0]){
+						gamer.style.backgroundColor = '#efe';
+					}
+					if (room.gamers[i][1]){
+						gamer.style.color = 'blue';
+					}
+					if (me == room.gamers[i][0]){
+						document.getElementById('ready').style.visibility = 'visible';
+						gamer.style.fontWeight = 'bold';
+					}
+					gamer.text = room.gamers[i][0];
+					gamers.add(gamer);
+				}
+				for (var i in room.spectators){
+					spectator = new Option();
+					spectator.value = room.spectators[i];
+					if (me = room.spectators[i]){
+						gamer.style.fontWeight = 'bold';
+					}
+					spectator.text = room.spectators[i];
+					spectators.add(spectator);
+				}
+			});
+			socket.on('add member', function(name, isgamer){
+				var player = new Option();
+				player.value = name;
+				player.text = name;
+				if (isgamer){
+					gamers.add(player);
+				}
+				else {
+					spectators.add(player);
+				}
+			});
+			socket.on('remove member', function(name){
+				$('#gamers option[value='+name+']').remove();
+				$('#spectators option[value='+name+']').remove();
+			});
+			socket.on('change leader', function(leadername){
+				$('#gamers option[value='+leader+']').css('background-color', '');
+				leader = leadername;
+				$('#gamers option[value='+leader+']').css('background-color', '#efe');
+				$('#gamers option[value='+leader+']').css('color', 'black');
+				if (leader == me){
+					$('#ready').val('Start');
+					document.getElementById('usermenu').style.visibility = 'visible';
+				}
+				else {
+					$('#ready').val('Ready');
+					document.getElementById('usermenu').style.visibility = 'hidden';
+				}
+			});
+			socket.on('user move', function(name, isgamer){
+				var userop = new Option();
+				userop.value = name;
+				userop.text = name;
+				if (me == name){
+					userop.style.fontWeight = 'bold';
+				}
+				if (isgamer){
+					document.getElementById('ready').style.visibility = 'visible';
+					$('#spectators option[value='+name+']').remove();
+					gamers.add(userop);
+				}
+				else {
+					document.getElementById('ready').style.visibility = 'hidden';
+					$('#gamers option[value='+name+']').remove();
+					spectators.add(userop);
+				}
+			});
+			socket.on('alert', function(msg){
+				alert(msg);
+			});
+			socket.on('kicked', function(){
+				alert('You have been kicked from server!');
+				document.logout.submit();
+			});
+
+			socket.on('kicked out', function(){
+				alert('You have been kicked!');
+				socket.emit('leave room');
+			})
+
+			socket.on('banned', function(){
+				alert('You have been banned!');
+				document.logout.submit();
+			});
+
+			socket.on('stop server', function(){
+				alert('Server is closed. Sorry.');
+				document.logout.submit();
+			});
+
+			socket.on('blacklist', function(black, name, added){
+				blacklist = black;
+				var gBox = document.getElementById('gamers');
+				var spBox = document.getElementById('spectators');
+				var gindex = gBox.selectedIndex;
+				var spindex = spBox.selectedIndex;
+				if (gindex != -1 && gBox.options[gindex].value == name){
+					if (added){
+						$('#ignore').val('Unignore');
+					}
+					else {
+						$('#ignore').val('Ignore');
+					}
+				}
+				if (spindex != -1 && spBox.options[spindex].value == name){
+					if (added){
+						$('#ignore').val('Unignore');
+					}
+					else {
+						$('#ignore').val('Ignore');
+					}
+				}				
+			});
+
+			socket.on('user ready', function(name, isready){
+				var color = isready ? 'blue' : 'black';
+				$('#gamers option[value='+name+']').css('color', color);
+			});
+
+			function kickUser(userBox){
+				var userindex = userBox.selectedIndex;
+				if (userindex != -1 && leader == me){
+					var name = userBox.options[userindex].value;
+					if (name != me){
+						if (confirm('Kick this user?')){
+							socket.emit('chat msg', '/kick ' + name);
+						}
+					}
+				}
+			}
+
+			function displayDeck(i){
+				for (j=0; j<4; j++){
+					$('#card'+(4*i+j)).animate({
+						top: pos[j][i].top,
+						left: pos[j][i].left
+					});
+				}
+				if (i<12){
+					setTimeout(function(){
+						displayDeck(i+1);
+					}, 200);
+				}
+				else {
+					setTimeout(function(){
+						for (j=0; j<13; j++){
+							flipCard(j);
+						}
+					}, 400);
+				}
+			}
+
+			function flipCard(cardnum){
+				var i = 4*cardnum;
+				cardimg[i].value = deck[cardnum].name;
+				$('#card'+i).animate({
+					width: '0px',
+					left: (s_pos[cardnum].x + 40) + 'px'
+				}, 'easeInSine', function(){
+					cardimg[i].src = 'images/'+cardimg[i].value+'.png';
+				});
+				$('#card'+i).animate({
+					width: '80px',
+					left: s_pos[cardnum].left
+				}, 'easeOutSine', function(){
+					click_ok = true;
+				});
+			}
+
+			function Point(x, y){
+				this.x = x
+				this.y = y
+				this.top = y + 'px';
+				this.left = x + 'px';
+			}
+
+			function getCardByName(name){
+				for (var i in cardimg){
+					if (cardimg[i].value == name){
+						return cardimg[i];
+					}
+				}
+				return null;
+			}
+
+			function getCardById(idnum){
+				for (var i in cardimg){
+					if (cardimg[i].id == 'card' + idnum){
+						return cardimg[i];
+					}
+				}
+				return null;
+			}
+
+			function getIndex(name){
+				for (var i=1; i<4; i++){
+					if (player_pos[i][0] == name){
+						return i;
+					}
+				}
+				return 0;
+			}
+
+			function viewScore(){				
+				var str = '';
+				for (var i=0; i<4; i++){
+					str += player_pos[i][0];
+					for (var j=0; j<8-player_pos[i][0].length; j++){
+						str += ' ';
+					}
+					str += sum(player_pos[i][2]) + '  ';
+					for (j=0; j<round; j++){
+						str += player_pos[i][2][j] + '  ';
+					}
+					if (i < 3){
+						str += '\n';
+					}
+				}
+				alert(str);
+			}
+
+			function randArray(){
+				var init = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+				var chose = [];
+				var index;
+				while (chose.length < 3){
+					index = Math.floor(Math.random() * init.length);
+					chose.push(init.splice(index, 1));
+				}
+				return chose;
+			}
+
+			function sum(array){
+				var sum = 0;
+				for (var i in array){
+					sum += eval(array[i]);
+				}
+				return sum;
+			}
+
+			function zeros(L){
+				var z = new Array(L);
+				for (var i = 0; i < L; i ++){
+					z[i] = 0;
+				}
+				return z;
+			}
+		</script>
+	</head>
+	<body>
+		<form method='post' name='logout'>
+			<input type='hidden' name='lognum' value=0>
+		</form>
+		<div id='heartscanvas' style='display:none;'>
+			<input type='button' value='Deal' id='deal' style='visibility:hidden' />
+			<input type='button' value='Send' id='send' style='visibility:hidden' disabled />
+			<input type='button' value='Confirm' id='confirm' style='visibility:hidden'/>
+			<div id='ngamerh' class='hearts'></div>
+			<div id='egamerh' class='hearts'></div>
+			<div id='sgamerh' class='hearts'></div>
+			<div id='wgamerh' class='hearts'></div>
+			<input type='button' value='View Score' id='score' />
+		</div>
+		<div id='mightycanvas' style='display:none;'>
+			<input type='button' value='Deal' id='deal' style='visibility:hidden' />
+		</div>
+		<div id='header'>
+			<h1> Room </h1>
+		</div>
+		<div id='leftside'>
+			<div id='roominfo'>
+				<input type='button' value='Ready' id='ready' style='visibility:hidden;'>
+				<input type='button' value='Leave' id='leave'>
+			</div>
+			<div id='chatpage'>
+				<form action='' id='chatform'>
+					<textarea id='chat'></textarea><br>
+					<input id='msg' type='text' autocomplete='off'><button id='send'> Send </button>
+				</form>
+			</div>
+		</div>
+		<div id='rightside'>
+			<div id='userinfo'>
+				<h2> Gamers </h2>
+				<select id='gamers' size=5 ondblclick='kickUser(this)'>
+				</select><br><br>
+				<input type='button' value='↕ Move' id='move' /><br><br>
+				<select id='spectators' size=6 ondblclick='kickUser(this)'>
+				</select>
+				<br>
+				<h3> Spectators </h3>
+			</div>
+			<div id='menu'>
+				<div id='usermenu' style='visibility:hidden;'>
+					<input type='button' value='Designate' id='designate' disabled />
+					<input type='button' value='Kick' id='kick' disabled />
+				</div>
+				<div id='chatmenu'>				
+					<input type='button' value='Whisper' id='whisper' />
+					<input type='button' value='Ignore' id='ignore' />
+				</div>
+			</div>
+		</div>
+		<div id='footer'>
+			<h3> Developed By Joonhyung Shin </h3>
+		</div>
+		<script language='javascript'>
+			$('#leave').on('click', function(){
+				socket.emit('leave room');
+			});
+			$('#move').on('click', function(){
+				socket.emit('move');
+			});
+
+			var spBox = document.getElementById('spectators');
+			var gBox = document.getElementById('gamers');
+
+			$('#designate').on('click', function(){
+				var gindex = gBox.selectedIndex;
+				if (gindex != -1){
+					if (confirm('Really designate this user?')){
+						var des_name = gBox.options[gindex].value;
+						socket.emit('chat msg', '/designate '+des_name);
+					}
+				}
+			});
+
+			$('#kick').on('click', function(){
+				var gindex = gBox.selectedIndex;
+				var spindex = spBox.selectedIndex;
+				if (gindex != -1){
+					kickUser(gBox);
+				}
+				else if (spindex != -1){
+					kickUser(spBox);
+				}
+			});
+
+			$('#gamers').on('change', function(){
+				var spindex = spBox.selectedIndex;
+				if (spindex != -1){
+					spBox.options[spindex].selected = false;
+				}
+				var gindex = gBox.selectedIndex;
+				var name = gBox.options[gindex].value;
+				if (name != me){
+					document.getElementById('designate').disabled = false;
+					document.getElementById('kick').disabled = false;
+					document.getElementById('ignore').disabled = false;
+				}
+				else {
+					document.getElementById('designate').disabled = true;
+					document.getElementById('kick').disabled = true;
+					document.getElementById('ignore').disabled = true;
+				}
+				var flag = 0;
+				for (var i in blacklist){
+					if (blacklist[i] == name){
+						flag = 1;
+						break;
+					}
+				}
+				if (flag == 0){
+					$('#ignore').val('Ignore');
+				}
+				else {
+					$('#ignore').val('Unignore');
+				}
+			});
+			$('#spectators').on('change', function(){
+				var gindex = gBox.selectedIndex;
+				if (gindex != -1){
+					gBox.options[gindex].selected = false;
+				}
+				document.getElementById('kick').disabled = false;
+				document.getElementById('designate').disabled = true;
+				var spindex = spBox.selectedIndex;
+				var name = spBox.options[spindex].value;
+				if (name != me){
+					document.getElementById('ignore').disabled = false;
+				}
+				else {
+					document.getElementById('ignore').disabled = true;
+				}
+				var flag = 0;
+				for (var i in blacklist){
+					if (blacklist[i] == name){
+						flag = 1;
+						break;
+					}
+				}
+				if (flag == 0){
+					$('#ignore').val('Ignore');
+				}
+				else {
+					$('#ignore').val('Unignore');
+				}
+			});
+
+			$('#whisper').on('click', function(){
+				var gindex = gBox.selectedIndex;
+				var spindex = spBox.selectedIndex;
+				if (gindex != -1 && $('#msg').val() != '') {
+					var name = gBox.options[gindex].value;
+					var msg = '/w ' + name + ' ' + $('#msg').val();
+					socket.emit('chat msg', msg);
+					$('#msg').val('');
+				}
+				else if (spindex != -1 && $('#msg').val() != '') {
+					var name = spBox.options[spindex].value;
+					var msg = '/w ' + name + ' ' + $('#msg').val();
+					socket.emit('chat msg', msg);
+					$('#msg').val('');
+				}
+				$('#msg').focus();
+			});
+
+			$('#ignore').on('click', function(){
+				var gindex = gBox.selectedIndex;
+				var spindex = spBox.selectedIndex;
+				if (gindex != -1) {
+					var name = gBox.options[gindex].value;
+					var msg = 'ignore ' + name;
+					if ($('#ignore').val() == 'Ignore'){
+						msg = '/' + msg;
+						$('#ignore').val('Unignore');
+					}
+					else {
+						msg = '/un' + msg;
+						$('#ignore').val('Ignore');
+					}
+					socket.emit('chat msg', msg);
+				}
+				else if (spindex != -1) {
+					var name = spBox.options[spindex].value;
+					var msg = 'ignore ' + name;
+					if ($('#ignore').val() == 'Ignore'){
+						msg = '/' + msg;
+						$('#ignore').val('Unignore');
+					}
+					else {
+						msg = '/un' + msg;
+						$('#ignore').val('Ignore');
+					}
+					socket.emit('chat msg', msg);					
+				}
+			});
+
+			$('#chatform').submit(function(){
+				socket.emit('chat msg', $('#msg').val());
+				$('#msg').val('');
+				$('#msg').focus();
+				return false;
+			});
+
+			$('#chat').on('focus', function(){
+				$('#msg').focus();
+			});
+
+			var chat = document.getElementById('chat');
+
+			socket.on('public msg', function(name, msg){
+				var flag = 0;
+				for (var i in blacklist){
+					if (blacklist[i] == name){
+						flag ++;
+					}
+				}
+				if (flag == 0){
+					if (ie){
+						var msg_mod = msg.split('&');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&amp;' + msg_mod[i];
+						}
+						msg_mod = msg.split('<');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&lt;' + msg_mod[i];
+						}
+						msg_mod = msg.split('>');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&gt;' + msg_mod[i];
+						}
+						$('#chat').append(name + ' : ' + msg + '\n');
+					}
+					else {
+						chat.value += (name + ' : ' + msg + '\n');
+					}
+					chat.scrollTop = chat.scrollHeight;
+				}
+			});
+
+			socket.on('private msg', function(name, msg){
+				var flag = 0;
+				for (var i in blacklist){
+					if (blacklist[i] == name){
+						flag ++;
+					}
+				}
+				if (flag == 0){
+					if (ie){
+						var msg_mod = msg.split('&');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&amp;' + msg_mod[i];
+						}
+						msg_mod = msg.split('<');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&lt;' + msg_mod[i];
+						}
+						msg_mod = msg.split('>');
+						msg = msg_mod[0];
+						for (i=1; i<msg_mod.length; i++){
+							msg += '&gt;' + msg_mod[i];
+						}
+						$('#chat').append('Whisper from ' + name + ' : ' + msg + '\n');
+					}
+					else {
+						chat.value += ('Whisper from ' + name + ' : ' + msg + '\n');
+					}
+					chat.scrollTop = chat.scrollHeight;
+				}
+			});
+
+			socket.on('server msg', function(msg){
+				if (ie){
+					var msg_mod = msg.split('&');
+					msg = msg_mod[0];
+					for (i=1; i<msg_mod.length; i++){
+						msg += '&amp;' + msg_mod[i];
+					}
+					msg_mod = msg.split('<');
+					msg = msg_mod[0];
+					for (i=1; i<msg_mod.length; i++){
+						msg += '&lt;' + msg_mod[i];
+					}
+					msg_mod = msg.split('>');
+					msg = msg_mod[0];
+					for (i=1; i<msg_mod.length; i++){
+						msg += '&gt;' + msg_mod[i];
+					}
+					$('#chat').append('<b>* ' + msg + '</b>\n');
+				}
+				else {
+					chat.value += ('* ' + msg + '\n');
+				}
+				chat.scrollTop = chat.scrollHeight;
+			});
+
+			socket.on('chat clear', function(){
+				if (chrome){
+					chat.value = '';
+				}
+				else {
+					$('#chat').val('');
+				}
+			});
+
+			$('#ready').on('click', function(){
+				if ($('#ready').val() != 'Start'){
+					var isReady = ($('#ready').val() == 'Ready');
+					if (isReady){
+						document.getElementById('move').disabled = true;
+						$('#ready').val('Cancel');
+					}
+					else {
+						document.getElementById('move').disabled = false;
+						$('#ready').val('Ready');
+					}
+					socket.emit('ready', isReady);
+				}
+				else {
+					socket.emit('start');
+				}
+			});
+
+			socket.on('start game', function(gamer_list){	// Game start. Initialize
+				socket.emit('make g_user');
+				$('#header').fadeOut();
+				$('#rightside').fadeOut();
+				$('#footer').fadeOut();
+				if (hearts){
+					canvas = document.getElementById('heartscanvas');
+					for (var i in cardimg){
+						if (i < 52){
+							canvas.appendChild(cardimg[i]);
+						}
+					}
+					for (i=0; i<52; i++){
+						$('#card'+i).on('click', function(){
+							if (this.value != 'back'){
+								if (click_ok){
+									var _i = parseInt(this.id.replace('card', '')) / 4;
+									if (submit_card){
+										var cardObj = getCardById(4*_i);
+										var flag = 0;
+										if (first_suit == ''){
+											if (trick == 1 && deck[_i].name != '2_of_clubs'){
+												flag = 1;
+												alert('You should deal 2 of spades.');
+											}
+											else if (!heartbreak && deck[_i].suit == 'hearts' && deck[0].suit != 'hearts'){
+												flag = 1;
+												alert('Heart is not broken!');
+											}
+										}
+										if (first_suit != '' && deck[_i].suit != first_suit){
+											for (j=0; j<deck.length; j++){
+												if (deck[j].suit == first_suit){
+													flag = 1;
+													break;
+												}
+											}
+											if (flag != 0){
+												alert('You have to follow the suit!');
+											}
+											else {
+												if (trick == 1 && deck[_i].score > 0 && (deck[0].score == 0 || deck[1].score == 0)){
+													flag = 1;
+													alert('You can not play a penalty card\nin the first trick.');
+												}
+											}
+										}
+										if (flag == 0){
+											click_ok = false;
+											submit_card = false;
+											first_suit = deck[_i].suit;
+											deck.splice(_i, 1);
+											cardObj.id = 's_sub';
+											deck.sort(function(card1, card2){
+												return card1.order - card2.order;
+											});
+											var tempObj;
+											for (j=_i+1; j<14-trick; j++){
+												tempObj = getCardById(4*j);
+												tempObj.id = 'card' + (4*(j-1));
+												$('#'+tempObj.id).animate({
+													top: s_pos[j-1].top,
+													left: s_pos[j-1].left
+												});
+											}
+											socket.emit('submit card', cardObj.value);
+										}
+										// submit card
+									}
+									else {
+										if (cardimg[4*_i].style.top == '469px'){
+											if (send_card > 0){
+												send_card --;
+												send_list.push(cardimg[4*_i].value);
+												send_index.push(_i);
+												$('#card'+(4*_i)).animate({
+													top: '449px'
+												});
+												if (send_card == 0){
+													document.getElementById('send').disabled = false;
+												}
+											}
+										}
+										else if (cardimg[4*_i].style.top == '449px'){
+											document.getElementById('send').disabled = true;
+											send_card ++;
+											for (var j in send_list){
+												if (send_list[j] == cardimg[4*_i].value){
+													send_list.splice(j, 1);
+													send_index.splice(j, 1);
+													break;
+												}
+											}
+											$('#card'+(4*_i)).animate({
+												top: '469px'
+											});
+										}
+									}
+								}
+							}
+						});
+					}
+					$('#heartscanvas:hidden:first').fadeIn();
+					for (i=0; i<4; i++){
+						if (me == gamer_list[i]){
+							$('#sgamerh').append(me);
+							break;
+						}
+					}
+					player_pos.push([me, [], zeros(20)]);
+					player_pos.push([gamer_list[(i+1)%4], [], zeros(20)]);
+					$('#wgamerh').append(gamer_list[(i+1)%4]);
+					player_pos.push([gamer_list[(i+2)%4], [], zeros(20)]);
+					$('#ngamerh').append(gamer_list[(i+2)%4]);
+					player_pos.push([gamer_list[(i+3)%4], [], zeros(20)]);
+					$('#egamerh').append(gamer_list[(i+3)%4]);
+
+					if (me == leader){
+						document.getElementById('deal').style.visibility = 'visible';
+					}
+				}
+				else {
+					canvas = document.getElementById('mightycanvas');
+					for (var i in cardimg){
+						canvas.appendChild(cardimg[i]);
+					}
+					$('#mightycanvas:hidden:first').fadeIn();
+					// Later
+				}
+			});
+
+			$('#deal').on('click', function(){
+				document.getElementById('deal').style.visibility = 'hidden';
+				socket.emit('deal card');
+			});
+
+			socket.on('your deck', function(mydeck){ // For gamers
+				// These are your cards.
+				deck = mydeck;
+				deck.sort(function(card1, card2){
+					return card1.order - card2.order;
+				});
+				displayDeck(0);
+			});
+
+			socket.on('gamers deck', function(playerlist, leftover){ // For spectators
+				// These cards were dealt to each player.
+			});
+
+			/* These are for Hearts. */
+
+			socket.on('send card', function(){	// For gamers
+				// Please send cards!
+				send_card = 3;
+				subcode = 0;
+				document.getElementById('send').style.visibility = 'visible';
+			});
+
+			socket.on('picked', function(name){
+				var r = getIndex(name);
+				var arr = randArray();
+				var n;
+				switch (r){
+					case 1:
+					for (i=0; i<3; i++){
+						n = 4*arr[i];
+						$('#card'+(n+r)).animate({
+							left: '100px'
+						});
+					}
+					player_pos[r][1] = arr;
+					break;
+					case 2:
+					for (i=0; i<3; i++){
+						n = 4*arr[i];
+						$('#card'+(n+r)).animate({
+							top: '50px'
+						});
+					}
+					player_pos[r][1] = arr;
+					break;
+					case 3:
+					for (i=0; i<3; i++){
+						n = 4*arr[i];
+						$('#card'+(n+r)).animate({
+							left: '820px'
+						});
+					}
+					player_pos[r][1] = arr;
+				}
+			})
+
+			socket.on('sent card', function(new_cards){	// For gamers
+				document.getElementById('send').style.visibility = 'hidden';
+				// These cards are sent to you.
+				var n;
+				var cardObj;
+				var flag;
+
+				send_index.sort(function(val1, val2){
+					return val2 - val1;
+				});
+
+				for (i=0; i<3; i++){
+					deck.splice(send_index[i], 1);
+					deck.push(new_cards[i]);
+				}
+				deck.sort(function(card1, card2){
+					return card1.order - card2.order;
+				});
+
+				switch (round % 4){
+					case 1:
+					for (i=0; i<3; i++){
+						n = 4*send_index[i];
+						cardimg[n].value = new_cards[i].name;
+						cardimg[n].src = 'images/' + new_cards[i].name + '.png';
+						cardimg[n].style.top = e_pos[player_pos[3][1][i]].top;
+						cardimg[n].style.left = e_pos[player_pos[3][1][i]].left;
+						n = 4*player_pos[3][1][i] + 3;
+						cardimg[n].style.top = n_pos[player_pos[2][1][i]].top;
+						cardimg[n].style.left = n_pos[player_pos[2][1][i]].left;
+						n = 4*player_pos[2][1][i] + 2;
+						cardimg[n].style.top = w_pos[player_pos[1][1][i]].top;
+						cardimg[n].style.left = w_pos[player_pos[1][1][i]].left;
+						n = 4*player_pos[1][1][i] + 1;
+						cardimg[n].style.top = s_pos[send_index[i]].top;
+						cardimg[n].style.left = s_pos[send_index[i]].left;
+					}
+					break;
+					case 2:
+					for (i=0; i<3; i++){
+						n = 4*send_index[i];
+						cardimg[n].value = new_cards[i].name;
+						cardimg[n].src = 'images/' + new_cards[i].name + '.png';
+						cardimg[n].style.top = w_pos[player_pos[1][1][i]].top;
+						cardimg[n].style.left = w_pos[player_pos[1][1][i]].left;
+						n = 4*player_pos[1][1][i] + 1;
+						cardimg[n].style.top = n_pos[player_pos[2][1][i]].top;
+						cardimg[n].style.left = n_pos[player_pos[2][1][i]].left;
+						n = 4*player_pos[2][1][i] + 2;
+						cardimg[n].style.top = e_pos[player_pos[3][1][i]].top;
+						cardimg[n].style.left = e_pos[player_pos[3][1][i]].left;
+						n = 4*player_pos[3][1][i] + 3;
+						cardimg[n].style.top = s_pos[send_index[i]].top;
+						cardimg[n].style.left = s_pos[send_index[i]].left;
+					}
+					break;
+					case 3:
+					for (i=0; i<3; i++){
+						n = 4*send_index[i];
+						cardimg[n].value = new_cards[i].name;
+						cardimg[n].src = 'images/' + new_cards[i].name + '.png';
+						cardimg[n].style.top = n_pos[player_pos[2][1][i]].top;
+						cardimg[n].style.left = n_pos[player_pos[2][1][i]].left;
+						n = 4*player_pos[1][1][i] + 1;
+						cardimg[n].style.top = e_pos[player_pos[3][1][i]].top;
+						cardimg[n].style.left = e_pos[player_pos[3][1][i]].left;
+						n = 4*player_pos[3][1][i] + 3;
+						cardimg[n].style.top = w_pos[player_pos[1][1][i]].top;
+						cardimg[n].style.left = w_pos[player_pos[1][1][i]].left;
+						n = 4*player_pos[2][1][i] + 2;
+						cardimg[n].style.top = s_pos[send_index[i]].top;
+						cardimg[n].style.left = s_pos[send_index[i]].left;
+					}
+					break;
+				}
+				for (i=0; i<13; i++){
+					for (var j in cardimg){
+						if (cardimg[j].value == deck[i].name){
+							cardimg[j].id = 'card' + (4*i);
+							cardimg[j].style.zIndex = 4*i;
+							break;
+						}
+					}
+				}
+				for (i=0; i<13; i++){
+					flag = 0;
+					for (j in new_cards){
+						if (new_cards[j].name == deck[i].name){
+							flag = 1;
+							break;
+						}
+					}
+					if (flag == 0){
+						$('#card'+(4*i)).animate({
+							top: s_pos[i].top,
+							left: s_pos[i].left
+						});
+					}
+					else {
+						$('#card'+(4*i)).animate({
+							top: '449px',
+							left: s_pos[i].left
+						});
+					}
+					for (j in player_pos[1][1]){
+						if (player_pos[1][1][j] == i){
+							$('#card'+(4*i+1)).animate({
+								top: w_pos[i].top,
+								left: '100px'
+							});
+						}
+					}
+					for (j in player_pos[2][1]){
+						if (player_pos[2][1][j] == i){
+							$('#card'+(4*i+2)).animate({
+								top: '50px',
+								left: n_pos[i].left
+							});
+						}
+					}
+					for (j in player_pos[3][1]){
+						if (player_pos[3][1][j] == i){
+							$('#card'+(4*i+3)).animate({
+								top: e_pos[i].top,
+								left: '820px'
+							});
+						}
+					}
+				}
+				send_list = [];
+				send_index = [];
+				subcode = 0;
+				document.getElementById('confirm').disabled = false;
+				document.getElementById('confirm').style.visibility = 'visible';
+			});
+
+			$('#confirm').on('click', function(){
+				document.getElementById('confirm').disabled = true;
+				if (subcode == 0){
+					for(i=0; i<13; i++){
+						$('#card'+(4*i)).animate({
+							top: s_pos[i].top
+						});
+					}
+				}
+				socket.emit('send confirm');
+			})
+
+			socket.on('user confirm', function(name){
+				if (subcode == 0){
+					var r = getIndex(name);
+					switch (r){
+						case 1:
+						for (i=0; i<13; i++){
+							$('#card'+(4*i+1)).animate({
+								left: w_pos[i].left
+							});
+						}
+						break;
+						case 2:
+						for (i=0; i<13; i++){
+							$('#card'+(4*i+2)).animate({
+								top: n_pos[i].top
+							});
+						}
+						break;
+						case 3:
+						for (i=0; i<13; i++){
+							$('#card'+(4*i+3)).animate({
+								left: e_pos[i].left
+							});
+						}
+					}
+				}
+				else if (subcode == 1){
+					var r = getIndex(name);
+					var gamer;
+					switch (r){
+						case 1:
+						gamer = document.getElementById('wgamerh');
+						break;
+						case 2:
+						gamer = document.getElementById('ngamerh');
+						break;
+						case 3:
+						gamer = document.getElementById('egamerh');
+						break;
+						default:
+						gamer = document.getElementById('sgamerh');
+					}
+					gamer.style.color = 'white';
+					gamer.style.fontWeight = '';
+					confirms ++;
+					if (confirms == 4){
+						confirms = 0;
+						var r = getIndex(maxUser);
+						$('#s_sub').animate({
+							top: pen[r].top,
+							left: pen[r].left
+						});
+						document.getElementById('s_sub').id = 'pen';
+						$('#w_sub').animate({
+							top: pen[r].top,
+							left: pen[r].left
+						});
+						document.getElementById('w_sub').id = 'pen';
+						$('#n_sub').animate({
+							top: pen[r].top,
+							left: pen[r].left
+						});
+						document.getElementById('n_sub').id = 'pen';
+						$('#e_sub').animate({
+							top: pen[r].top,
+							left: pen[r].left
+						});
+						document.getElementById('e_sub').id = 'pen';
+						document.getElementById('confirm').style.visibility = 'hidden';
+					}
+				}
+			})
+
+			socket.on('card sent', function(playerlist){	// For spectators
+				// These cards were exchanged.
+			});
+
+			socket.on('gamer turn', function(name){	// For everyone
+				document.getElementById('confirm').style.visibility = 'hidden';
+				if (me == name){
+					submit_card = true;
+					click_ok = true;
+				}
+				var r = getIndex(name);
+				var gamer;
+				switch (r){
+					case 1:
+					gamer = document.getElementById('wgamerh');
+					break;
+					case 2:
+					gamer = document.getElementById('ngamerh');
+					break;
+					case 3:
+					gamer = document.getElementById('egamerh');
+					break;
+					default:
+					gamer = document.getElementById('sgamerh');
+				}
+				gamer.style.color = 'gray';
+				gamer.style.fontWeight = 'bold';
+			})
+
+			socket.on('submit card', function(name, card){	// For everyone
+				// Player [name] sent [card].
+				if (first_suit == ''){
+					first_suit = card.suit;
+				}
+				var r = getIndex(name);
+				var i = Math.floor(Math.random()*(14-trick));
+				var cardObj;
+				var tempObj;
+				var gamer;
+				switch (r){
+					case 1:
+					cardObj = getCardById(4*i+1);
+					cardObj.value = card.name;
+					cardObj.src = 'images/' + card.name + '.png';
+					cardObj.id = 'w_sub';
+					for (j=i+1; j<14-trick; j++){
+						tempObj = getCardById(4*j+1);
+						tempObj.id = 'card' + (4*(j-1)+1);
+						$('#'+tempObj.id).animate({
+							top: w_pos[j-1].top,
+							left: w_pos[j-1].left
+						})
+					}
+					$('#w_sub').animate({
+						top: w_sub.top,
+						left: w_sub.left
+					});
+					gamer = document.getElementById('wgamerh');
+					break;
+					case 2:
+					cardObj = getCardById(4*i+2);
+					cardObj.value = card.name;
+					cardObj.src = 'images/' + card.name + '.png';
+					cardObj.id = 'n_sub';
+					for (j=i+1; j<14-trick; j++){
+						tempObj = getCardById(4*j+2);
+						tempObj.id = 'card' + (4*(j-1)+2);
+						$('#'+tempObj.id).animate({
+							top: n_pos[j-1].top,
+							left: n_pos[j-1].left
+						})
+					}
+					$('#n_sub').animate({
+						top: n_sub.top,
+						left: n_sub.left
+					});
+					gamer = document.getElementById('ngamerh');
+					break;
+					case 3:
+					cardObj = getCardById(4*i+3);
+					cardObj.value = card.name;
+					cardObj.src = 'images/' + card.name + '.png';
+					cardObj.id = 'e_sub';
+					for (j=i+1; j<14-trick; j++){
+						tempObj = getCardById(4*j+3);
+						tempObj.id = 'card' + (4*(j-1)+3);
+						$('#'+tempObj.id).animate({
+							top: e_pos[j-1].top,
+							left: e_pos[j-1].left
+						})
+					}
+					$('#e_sub').animate({
+						top: e_sub.top,
+						left: e_sub.left
+					});
+					gamer = document.getElementById('egamerh');
+					break;
+					default:
+					$('#s_sub').animate({
+						top: s_sub.top,
+						left: s_sub.left
+					});
+					gamer = document.getElementById('sgamerh');
+				}
+				gamer.style.color = 'white';
+				gamer.style.fontWeight = '';
+				if (turns < 4){
+					turns ++;
+				}
+				else {
+					turns = 1;
+					first_suit = '';
+					document.getElementById('sgamerh').style.color = 'gray';
+					document.getElementById('sgamerh').style.fontWeight = 'bold';
+					document.getElementById('wgamerh').style.color = 'gray';
+					document.getElementById('wgamerh').style.fontWeight = 'bold';
+					document.getElementById('ngamerh').style.color = 'gray';
+					document.getElementById('ngamerh').style.fontWeight = 'bold';
+					document.getElementById('egamerh').style.color = 'gray';
+					document.getElementById('egamerh').style.fontWeight = 'bold';
+
+					document.getElementById('s_sub').style.zIndex = 100;
+					document.getElementById('w_sub').style.zIndex = 100;
+					document.getElementById('n_sub').style.zIndex = 100;
+					document.getElementById('e_sub').style.zIndex = 100;
+					if (trick < 13){
+						trick ++;
+					}
+					else {
+						trick = 1;
+						round ++;
+					}
+				}
+			});
+			
+			$('#score').on('click', function(){
+				viewScore();
+			});
+			
+			socket.on('max user', function(name, score){
+				maxUser = name;
+				subcode = 1;
+				var r = getIndex(maxUser);
+				player_pos[r][2][round-1] += score;
+				document.getElementById('confirm').disabled = false;
+				document.getElementById('confirm').style.visibility = 'visible';
+			});
+
+			// Hearts
+
+			
+
+			$('#send').on('click', function(){
+				click_ok = false;
+				document.getElementById('send').disabled = true;
+				socket.emit('send card', send_list);
+			});
+
+			socket.on('heart break', function(){	// For everyone
+				heartbreak = true;
+				// Heart is broken!
+			});
+
+			socket.on('gamers score', function(playerinfo){	// For everyone
+				// playerinfo[i][0] is username. playerinfo[i][1] is penalty deck.
+				setTimeout(function(){
+					for (i=0; i<4; i++){
+						playerinfo[i][1].sort(function(card1, card2){
+							return card1.order - card2.order;
+						});
+					}
+					var r;
+					var str = '';
+					var index = 0;
+					for (i=0; i<4; i++){
+						r = getIndex(playerinfo[i][0]);
+						for (j=0; j<playerinfo[i][1].length; j++){
+							cardimg[index].src = 'images/' + playerinfo[i][1][j].name + '.png';
+							cardimg[index].style.top = pos[r][j].top;
+							cardimg[index].style.left = pos[r][j].left;
+							cardimg[index].style.zIndex = j;
+							index ++;
+						}
+						player_pos[r][2][round-2] = playerinfo[i][2];
+					}	
+					viewScore();
+					for (i=0; i<53; i++){
+						cardimg[i].value = 'back';
+						cardimg[i].src = 'images/back.png';
+						cardimg[i].id = 'card' + i;
+						cardimg[i].style.left = center.left;
+						cardimg[i].style.top = center.top;
+						cardimg[i].style.zIndex = i;
+					}
+					socket.emit('send confirm');
+				}, 1000);					
+			});
+
+			socket.on('game over', function(playerinfo){
+				var str = '';
+				var r;
+				var score;
+				for (i=0; i<4; i++){
+					score = sum(playerinfo[i][1]);
+					str += (playerinfo[i][0] + ' : ' + score);
+				}
+				alert(str);
+				$('#heartscanvas').fadeOut();
+				$('#header').fadeIn();
+				$('#rightside').fadeIn();
+				$('#footer').fadeIn();
+			});
+		</script>
+	</body>
+</html>

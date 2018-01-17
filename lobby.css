@@ -1,0 +1,330 @@
+body {
+	position:relative;
+	text-align:center;
+	margin-left:auto;
+	margin-right:auto;
+}
+
+/* Header */
+#header {
+	border:1px solid #555;
+	background-color:#ccc;
+	margin-bottom:10px;
+}
+
+/* Chat page */
+#chatpage {
+	width:960px;
+	height:480px;
+	margin-left:20%;
+	position:absolute;
+}
+#content1 {
+	border:1px solid #555;
+	background-color:#ccc;
+	margin-bottom:10px;
+	width:60%;
+	height:100%;
+	margin-right:25%;
+	margin-left:15%;
+	float:left;
+	position:absolute;
+	z-index:1;
+}
+textarea#chat {
+	font-size:16px;
+	font-family:'돋움';
+	margin-left:1%;
+	margin-right:1%;
+	margin-top:10px;
+	width:97%;
+	height:400px;
+}
+input#msg {
+	margin-left:1%;
+	width:85%;
+}
+input#send {
+	margin-left:1%;
+	width:20%;
+}
+#sidebar1 {
+	width:100%;
+	height:100%;
+	position:absolute;
+	z-index:0;
+}
+#sidebar1_a {
+	border:1px solid #555;
+	background-color:#ccc;
+	margin-bottom:10px;
+	width:10%;
+	height:100%;
+	float:left;
+}
+input#makegame{
+	width:95%;
+	margin-left:1%;
+	margin-right:1%;
+	height:15%;
+	margin-top:2%;
+	margin-bottom:1%;
+}
+input#joingame{
+	width:95%;
+	margin-left:1%;
+	margin-right:1%;
+	height:15%;
+	margin-top:1%;
+	margin-bottom:1%;
+}
+input#option{
+	width:95%;
+	margin-left:1%;
+	margin-right:1%;
+	height:15%;
+	margin-top:1%;
+	margin-bottom:1%;
+}
+input#logout{
+	width:95%;
+	margin-left:1%;
+	margin-right:1%;
+	height:15%;
+	margin-top:1%;
+}
+input#manage{
+	width:95%;
+	margin-left:1%;
+	margin-right:1%;
+	height:15%;
+	margin-top:1%;
+}
+#sidebar1_b {
+	border:1px solid #555;
+	background-color:#ccc;
+	margin-bottom:10px;
+	width:20%;
+	height:100%;
+	float:right;
+}
+select#connect {
+	font-size:20px;
+	width:100%;
+	height:92%;
+}
+input#whisper {
+	width:48%;
+	height:8%;
+}
+input#ignore {
+	width:48%;
+	height:8%;
+}
+
+/* Room page */
+#roompage {
+	position:absolute;
+	border: 3px solid gray;
+	width:500px;
+	height:430px;
+	margin: 0 auto;
+	z-index:10;
+	background-color:#ccc;
+}
+
+#topbar {
+	height:20px;
+	background-color:gray;
+	cursor:pointer;
+	cursor:hand;
+}
+
+#title {
+	z-index:1;
+	position:absolute;
+	margin-left:10px;
+	margin-top:45px;
+}
+
+#passw {
+	z-index:1;
+	position:absolute;
+	margin-left:10px;
+	margin-top:350px;
+}
+
+#container {
+	z-index:0;
+	margin-top:5px;
+	margin-left:5px;
+}
+
+ul.tabs {
+	margin: 0;
+	padding: 0;
+	float:left;
+	list-style:none;
+    text-align:center;
+	height:32px;
+	border-bottom:2px solid #eee;
+	border-left: 2px solid #eee;
+    width: 488px;
+    font-family:"dotum";
+    font-size:12px;
+}
+
+ul.tabs li {
+    float: left;
+    cursor: pointer;
+    width:90px;
+    height: 31px;
+    line-height: 31px;
+    border: 1px solid #eee;
+    border-left: none;
+    font-weight: bold;
+    background: #fafafa;
+    overflow: hidden;
+    position: relative;
+}
+ul.tabs li.active {
+    background: #FFFFFF;
+    border-bottom: 1px solid #FFFFFF;
+}
+.tab_container {
+    border: 1px solid #eee;
+    border-top: none;
+    clear: both;
+    float: left;
+    text-align:left;
+    width: 488px;
+    height:340px;
+    background: #FFFFFF;
+}
+.tab_menu {
+    padding: 5px;
+    font-size: 12px;
+    display: none;
+}
+.tab_container .tab_menu ul {
+    width:100%;
+    margin:0px;
+    padding:0px;
+}
+.tab_container .tab_menu ul li {
+    padding:5px;
+    list-style:none
+}
+
+#hearts_max {
+	margin-left:360px;
+	font-size: 16px;
+}
+
+#create_h {
+	width:80px;
+	height:30px;
+	position:absolute;
+	margin-top:300px;
+	margin-left:300px;
+}
+
+#cancel_h {
+	width:80px;
+	height:30px;
+	position:absolute;
+	margin-top:300px;
+	margin-left:390px;
+}
+
+#mighty_max {
+	margin-left:360px;
+	font-size:16px;
+}
+
+#create_m {
+	width:80px;
+	height:30px;
+	position:absolute;
+	margin-top:300px;
+	margin-left:300px;
+}
+
+#cancel_m {
+	width:80px;
+	height:30px;
+	position:absolute;
+	margin-top:300px;
+	margin-left:390px;
+}
+
+#bottombar {
+	height:20px;
+	width:100%;
+	background-color:#ccc;
+	cursor:pointer;
+	cursor:hand;
+	position:relative;
+	margin-top:390px;
+}
+
+/* Join page */
+#joinpage {
+	width:960px;
+	height:480px;
+	margin-left:20%;
+	position:absolute;
+}
+#sidebar3 {
+	border:1px solid #555;
+	background-color:#ccc;
+	margin-bottom:10px;
+	width:10%;
+	height:100%;
+	float:left;
+}
+#content3 {
+	border:1px solid #555;
+	background-color:#ccc;
+	margin-left:10%;
+	margin-bottom:10px;
+	width:50%;
+	height:100%;
+	overflow:hidden;
+	float:left;
+}
+select#roomlist {
+	font-size:20px;
+	width:100%;
+	height:100%;
+}
+#roominfo {
+	border:1px solid #555;
+	background-color:#ccc;
+	margin-bottom:10px;
+	width:25%;
+	height:100%;
+	float:right;
+}
+input#join {
+	width:80px;
+	height:40px;
+	margin-top:420px;
+	margin-left:50%;
+}
+input#backj{
+	width:95%;
+	margin-left:1%;
+	margin-right:1%;
+	height:15%;
+	margin-top:2%;
+	margin-bottom:1%;
+}
+
+/* Footer */
+#footer {
+	clear:both;
+	border:1px solid #555;
+	background-color:#ccc;
+	margin-top:500px;
+}

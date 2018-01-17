@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+	<head>
+		<title> Online Hearts - Login Page </title>
+		<meta charset="utf-8" />
+		<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+		<script language='javascript'>
+		</script>
+		<style type='text/css'>
+		body {
+			width:300px;
+			margin:100px auto;
+		}
+		#login {
+			background:#fff1ff;
+			border:1px solid black;
+			margin-left:50px;
+		}
+		#reg {
+			margin-top:5px;
+			margin-left:5px;
+			margin-bottom:5px;
+		}
+		input#regi {
+			width:180px;
+		}
+		input#subm {
+			margin-left:85px;
+		}
+		</style>
+	</head>
+	<body onLoad="$('#regi').focus()">
+		<form method='post'>
+			<div id = 'login'>
+				<div id='reg'>
+					<label>NAME</label> <input type='text' name='name' id='regi' autocomplete='off' maxlength=5 required/><br><br>
+					<input type='submit' id='subm' value='Confirm' />
+				</div>
+			</div>
+		</form>
+		<!--
+		<script language='javascript'>
+			var agent = navigator.userAgent;
+			if (/chrome/i.test(agent)){
+				alert('I recommend you to use other browser rather than Google Chrome,\nsince some minor bugs were detected while using.\nThank you for using Online Hearts.');
+			}
+		</script>
+		-->
+	</body>
+</html>
